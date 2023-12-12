@@ -1,0 +1,302 @@
+﻿@page "/MakePost"
+@using HttpClients.ClientInterfaces
+@using Domain.DTOs
+@inject IPostService postService;
+@inject IUserService UserService;
+@inject IJSRuntime Js;
+
+@using BlazorInputTags
+@using Domain.Models
+@using System.Security.Claims
+@attribute [Authorize("MustBeAdmin")]
+@attribute [Authorize("MustBeMod")]
+@attribute [Authorize("MustBeLandlord")]
+
+<HeaderEl title="Make a post" description="Bellow you will find a form that will help you make a new post on our website. "/>
+
+<div class="pageContent">
+
+    <h1 class="body_title">
+        <b>Post something</b>
+    </h1>
+
+    <div class="container card">
+        <form action="action_page.php">
+            <label for="title">Title</label>
+            <input type="text" id="title" name="title" placeholder="Title..." @bind="Title" bind:event="oninput">
+
+            <label for="Description">Description</label>
+            <input type="text" id="Description" name="Description" placeholder="Description..." @bind="Description" bind:event="oninput">
+
+            <label for="Street">Adress</label>
+            <div style="display: flex; flex-direction: row; flex-wrap: wrap">
+                <input type="text" id="Street" name="Street" placeholder="Street" @bind="Street" bind:event="oninput" style="width: 100%; margin: auto; margin-bottom: 5px">
+                <input type="text" id="City" name="Street" placeholder="City" @bind="City" bind:event="oninput" style="width: 33%; margin: auto;">
+                <input type="text" id="POstCode" name="Street" placeholder="PostCode" @bind="PostCode" bind:event="oninput" style="width: 33%; margin: auto;">
+                <input type="text" id="Country" name="Street" placeholder="Country" @bind="Country" bind:event="oninput" style="width: 33%; margin: auto;">
+            </div>
+            <div style="display: flex; flex-direction: row; justify-content: space-between" class="NUME">
+                <div class="nume">
+                    <label for="Area">Area</label>
+                    <input type="number" id="Area" name="Area" placeholder="Area..." @bind="Area" bind:event="oninput">
+                </div>
+
+                <div class="nume">
+                    <label for="maxTenants" id="maxTenants">Max Tenants</label>
+                    <input type="number" min="1" max="7" step="1" value="1" name="maxTenants" @onchange=@(e => MaxTenants = int.Parse(e.Value.ToString()))>
+                </div>
+
+                <div class="nume">
+                    <label for="Utilities">Utilities</label>
+                    <input type="number" id="Utilities" name="Utilities" placeholder="Utilities..." @bind="utilities" bind:event="oninput">
+                </div>
+            </div>
+
+            <div style="display: flex; flex-direction: row; justify-content: space-between" class="NUME">
+
+                <div class="nume">
+                    <label for="deposit">Deposit</label>
+                    <input type="number" min="0" max="10000" step="1000" value="0" id="deposit" name="deposit" @onchange=@(e => deposit = double.Parse(e.Value.ToString()))>
+                </div>
+
+                <div class="nume">
+                    <label for="monthlyRent" class="text-center">Monthly rent</label>
+                    <input type="number" min="0" max="10000" step="1000" value="0" id="monthlyRent" name="deposit" @onchange=@(e => monthlyRent = double.Parse(e.Value.ToString()))>
+                </div>
+                
+                <div class="nume">
+                    <label for="moveInPrice">Move in Price</label>
+                    <input type="number" min="0" max="10000" step="1000" value="0" id="moveInPrice" name="maxTenants" @onchange=@(e => moveInPrice = double.Parse(e.Value.ToString()))>
+
+                </div>
+            </div>
+
+
+            <label for="amenity">Amenity</label>
+            <div class="amenityTags">
+                <InputTags OnTagAdded="OnTagAddedAsync" OnTagRemoved="OnTagRemovedAsync"/>
+            </div>
+
+
+            <div class="bodyDiv">
+                <div class="intInput">
+                    <label for="energy" class="energy">Energy rating</label>
+                    <select name="energy" id="energy" @bind="EnergyRating.ID">
+                        <option selected>Select rating</option>
+                        @foreach (var energyRating in _energyRatings)
+                        {
+                            <option value="@energyRating.ID">@energyRating.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="intInputs">
+                    <label for="type" class="type">Type</label>
+
+                    <select name="type" id="type" @bind="HousingType.ID">
+                        <option selected>Select type</option>
+                        @foreach (var housingType in _housingTypes)
+                        {
+                            <option value="@housingType.ID">@housingType.Name</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="bottomEllements">
+                <label for="Images" class="imageHolder">
+                    <InputFile class="imageSelect"  OnChange="HandleFileSelect"/>
+                    <img src="img/photo.png" class="photoIcon"/>
+
+                </label>
+
+            </div>
+            <div class="">
+                @foreach (var image in tempImg)
+                {
+                    <img src="@($"data:image/png;base64,{Convert.ToBase64String(image.imageData)}")"
+                         class="image" style="width: 100px; height: 100px; border-radius: 50px;"/>
+                }
+            </div>
+            <button type="button" class="submitBtn" @onclick="Create">Make post</button>
+        </form>
+        <p>@result</p>
+    </div>
+</div>
+
+
+@code {
+    
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthState { get; set; } = null!;
+
+    Domain.Models.Post post { get; set; }
+
+
+    static User user1;
+
+    static IEnumerable<PostStatus> _statuses = new List<PostStatus>();
+    static IEnumerable<EnergyRating> _energyRatings = new List<EnergyRating>();
+    static IEnumerable<HousingType> _housingTypes = new List<HousingType>();
+    string result = "";
+    // public long ID { get; set; } = 0;
+
+    public User UserID { get; set; } = new();
+
+    public string Title { get; set; } = "";
+    public string Description { get; set; } = "";
+    double deposit { get; set; }
+    double utilities { get; set; }
+    double monthlyRent { get; set; }
+    double moveInPrice { get; set; }
+
+    public string Street { get; set; } = "";
+    public string City { get; set; } = "";
+    public string PostCode { get; set; } = "";
+    public string Country { get; set; } = "";
+
+
+    public double Area { get; set; }
+
+    public int MaxTenants { get; set; }
+
+    public HousingType HousingType { get; set; } = new HousingType();
+
+
+    public EnergyRating EnergyRating { get; set; } = new EnergyRating();
+
+    public List<string> Tags { get; set; } = new();
+
+    private Task OnTagAddedAsync(string tag)
+    {
+        Tags.Add(tag);
+        return Task.CompletedTask;
+    }
+
+    private Task OnTagRemovedAsync(string tag)
+    {
+        Tags.Remove(tag);
+        return Task.CompletedTask;
+    }
+
+    private List<ImageByte> tempImg = new List<ImageByte>();
+    private List<IBrowserFile> tempList = new List<IBrowserFile>();
+    string htmlshit = "";
+
+    private async Task HandleFileSelect(InputFileChangeEventArgs e)
+    {
+        foreach (var file in e.GetMultipleFiles())
+        {
+            tempImg.Add(new ImageByte()
+            {
+                imageData = await ConvertToByteArray(file)
+            });
+            tempList.Add(file);
+        }
+    }
+
+
+    private async Task<byte[]> ConvertToByteArray(IBrowserFile file)
+    {
+        using (var stream = file.OpenReadStream())
+        {
+            using (var memoryStream = new MemoryStream())
+            {
+                await stream.CopyToAsync(memoryStream);
+                return memoryStream.ToArray();
+            }
+        }
+    }
+
+    string p = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            AuthenticationState authState = await AuthState;
+            ClaimsPrincipal userblea = authState.User;
+            string p = userblea.FindFirst("ID").Value;
+            int id = int.Parse(p);
+            user1 = await UserService.GetUserByIdAsync(id);
+            UserID = user1;
+            _statuses = await postService.GetPostStatusesAsync();
+            _energyRatings = await postService.GetEnergyRatingsAsync();
+            _housingTypes = await postService.GetHousingTypesAsync();
+            foreach (var status in _statuses)
+            {
+                Console.WriteLine(status.ToString());
+            }
+            foreach (var energyRating in _energyRatings)
+            {
+                Console.WriteLine(energyRating.ToString());
+            }
+            foreach (var housingType in _housingTypes)
+            {
+                Console.WriteLine(housingType.ToString());
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+
+    private async Task Create()
+    {
+        List<Amenity> amenities = new();
+        foreach (var tag in Tags)
+        {
+            amenities.Add(new Amenity
+            {
+                Name = tag,
+                Description = ""
+            });
+        }
+        if (tempImg.Count <5 || tempImg.Count > 5)
+        {
+            result = "You need to add only 5 images";
+            return;
+        }
+        try
+        {
+            PostCreationDTO postDto = new PostCreationDTO
+            {
+                UserID = UserID,
+                Title = Title,
+                Description = Description,
+                Address = new Address
+                {
+                    Street = Street,
+                    City = City,
+                    Zipcode = PostCode,
+                    Country = Country
+                },
+                Area = Area,
+                Amenities = amenities,
+                MaxTenants = MaxTenants,
+                HousingType = _housingTypes.ToList().Find(type => type.ID == HousingType.ID),
+                EnergyRating = _energyRatings.ElementAt((int)EnergyRating.ID - 1),
+                Cost = new Cost
+                {
+                    Deposit = deposit,
+                    MonthlyRent = monthlyRent,
+                    MoveInPrice = moveInPrice,
+                    Utilities = utilities
+                },
+                CreationDate = DateTime.Now.ToString(),
+                PostStatus = _statuses.ElementAt(1),
+                Images = tempImg
+            };
+
+            Console.WriteLine(postDto.ToString());
+
+            post = await postService.CreateCommentAsync(postDto);
+            result = "Post successfully created";
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            result = e.Message;
+        }
+    }
+
+}

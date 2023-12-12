@@ -1,0 +1,276 @@
+@page "/post/{id:int}"
+@using HttpClients.ClientInterfaces
+@using Domain.Models
+@using System.Security.Claims
+@using Domain.DTOs
+@inject NavigationManager _nav;
+@inject IPostService postService;
+@inject IChatService chatService;
+<HeaderEl title="@post.Title" description="@post.Description"/>
+<div class="container">
+    <div class="images">
+        <div class="firstSection">
+                @if (_images != null)
+                {
+                    @if (_images.Any())
+                    {
+                        @if (_images[0] != null)
+                        {
+                            <img src="@_images[0].Link" class="secondImg"/>
+
+                        }
+                    }
+                }
+        </div>
+        <div class="secondSection">
+            <div class="firstColumn">
+                <div class="firstImage">
+                    @if (_images.Count() >= 2)
+                    {
+                    @if (_images.ElementAt(1) != null)
+                    {
+                            <img src="@_images[1].Link" class="secondImg"/>
+                    }
+                    }
+                </div>
+                <div class="firstImage">
+                    @if (_images.Count() >= 3)
+                    {
+                        if (_images.ElementAt(2) != null)
+                        {
+                            <img src="@_images.ElementAt(2).Link" class="secondImg"/>
+                  }
+                   }
+                </div>
+            </div>
+            <div class="secondColumn">
+                <div class="firstImage">
+                    @if (_images.Count() >= 4 )
+                    {
+                        @if (_images.ElementAt(3) != null)
+                        {
+                            <img src="@_images.ElementAt(3).Link" class="secondImg"/>
+                         }
+                     }
+                </div>
+                <div class="firstImage">
+                    @if (_images.Count() == 5)
+                    {
+                       @if (_images.ElementAt(4) != null)
+                        {
+                            <img src="@_images.ElementAt(4).Link" class="secondImg"/>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bodyDiv">
+        <div class="firstBodyDiv">
+            <h2>Highlights</h2>
+            <div class="postItems">
+                <div class="properties">
+                    <h5>Type</h5>
+                    <p>@housingType.Name</p>
+                </div>
+                <div class="properties">
+                    <h5>Dimensions</h5>
+                    <p>@post.Area</p>
+                </div>
+                <div class="properties">
+                    <h5>Amenities</h5>
+                    @if (_amenities == null)
+                    {
+                        <span>Loading..</span>
+                    }
+                    else if (!_amenities.Any())
+                    {
+                        <span>Empty</span>
+                    }
+                    else
+                    {
+                        <span>
+                            @foreach (var amenity in post.Amenities)
+                            {
+                                <span>@amenity.Name </span>
+                            }
+                        </span>
+                    }
+                </div>
+            </div>
+
+            <div class="postItems">
+                <div class="properties">
+                    <h5>Utilities</h5>
+                    <p>@cost.Utilities</p>
+
+                </div>
+                <div class="properties">
+                    <h5>Deposit</h5>
+                    <p>@cost.Deposit</p>
+                </div>
+                <div class="properties">
+                    <h5>Monthly rent</h5>
+                    <p>@cost.MonthlyRent</p>
+
+                </div>
+                <div class="properties">
+                    <h5>Move in price</h5>
+                    <p>@cost.MoveInPrice</p>
+                </div>
+            </div>
+            <div class="postItems">
+                <div class="properties">
+                    <h5>Max Tenants</h5>
+                    <p>@post.MaxTenants</p>
+
+                </div>
+                <div class="properties">
+                    <h5>Energy rating</h5>
+                    <p>@energyRating.Name</p>
+                </div>
+            </div>
+        </div>
+        <div class="">
+            <div class="secondBodyDiv card">
+                <h4>Landlord: </h4>
+                @if(user != null)
+                {
+                    <h5 class="price">@user.FirstName @user.LastName</h5>
+
+                }
+                <hr>
+                <h2>Start a chat to get more details</h2>
+                <textarea id="fname" placeholder="Message.." @bind="message"></textarea>
+
+                <div class="submitBtn" @onclick="startChat">
+                    <input type="submit" value="Book appointment">
+                    <p>@error</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <AuthorizeView Policy="MustBeClient">
+        <Authorized>
+            @if (user.ID == int.Parse(context.User.FindFirst("ID").Value))
+            {
+                <div class="button-row">
+                    <button type="button" @onclick="NavigateToEdit">Edit</button>
+                </div>
+            }
+        </Authorized>
+    </AuthorizeView>
+    <AuthorizeView Policy="MustBeLandlord">
+        <Authorized>
+            @if (post.UserID.ID == int.Parse(context.User.FindFirst("ID").Value))
+            {
+                <button type="button" @onclick="NavigateToEdit">Edit</button>
+            }
+        </Authorized>
+    </AuthorizeView>
+    <AuthorizeView Policy="MustBeMod">
+        <Authorized>
+            <button type="button" @onclick="NavigateToEdit">Edit</button>
+        </Authorized>
+    </AuthorizeView>
+    <AuthorizeView Policy="MustBeAdmin">
+        <Authorized>
+            <div class="buttonDiv">
+                <button type="button" @onclick="NavigateToEdit">Edit</button>
+            </div>
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+@code {
+
+    [Parameter]
+    public int Id { get; set; }
+    
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthState { get; set; } = null!;
+
+    Domain.Models.Post post = new();
+    Cost cost = new();
+    Address address = new();
+    User user = new();
+    HousingType housingType = new();
+    EnergyRating energyRating = new();
+    List<Image> _images = new();
+    List<Amenity> _amenities = new();
+
+    string message = "";
+    int userid = 0;
+    string error = "";
+    protected override async Task OnInitializedAsync()
+    {
+    // msg = "";
+
+
+        try
+        {
+            AuthenticationState authState = await AuthState;
+            ClaimsPrincipal userblea = authState.User;
+            string p = userblea.FindFirst("ID").Value;
+            userid = int.Parse(p);
+            
+            post = await postService.GetPostByPostIdAsync(Id);
+            
+            cost = post.Cost;
+            address = post.Address;
+            user = post.UserID;
+            housingType = post.HousingType;
+            energyRating = post.EnergyRating;
+            user = post.UserID;
+            _images = post.Images.ToList();
+            _amenities = post.Amenities.ToList();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+    // msg = e.Message;
+        }
+    }
+
+    public async void  startChat()
+    {
+        if (user.ID == userid )
+        {
+            error = "You can't start a chat with yourself";
+            return;
+        }
+            try
+            {
+                CreateChatDTO chat = new()
+                {
+                    PostID = post.ID,
+                    UserID = userid,
+                    Message = new()
+                    {
+                        UserID = userid,
+                        Text = message,
+                        Time = DateTime.Now.ToString()
+                    
+                    }
+                };
+                await chatService.CreateChatAsync(chat);
+                _nav.NavigateTo($"/MyChats");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+        
+        
+
+    }
+
+    public void NavigateToEdit()
+    {
+        _nav.NavigateTo($"/ManagePost/{Id}");
+    }
+
+}

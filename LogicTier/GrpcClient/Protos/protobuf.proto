@@ -1,0 +1,255 @@
+syntax = "proto3";
+
+package dk.via.mithus.protobuf;
+option java_multiple_files = true;
+
+service AddressService {
+  rpc CreateAddress(Address) returns (Address);
+}
+
+service CostService {
+  rpc CreateCost(Cost) returns (Cost);
+}
+
+service AmenityService {
+  rpc CreateAmenity(Amenity) returns (Amenity);
+}
+
+service EnergyRatingService {
+  rpc CreateEnergyRating(EnergyRating) returns (EnergyRating);
+}
+
+service HousingTypeService {
+  rpc CreateHousingType(HousingType) returns (HousingType);
+}
+
+service PostStatusService {
+  rpc CreatePostStatus(PostStatus) returns (PostStatus);
+}
+
+service PostService {
+  rpc CreatePost(PostCreation) returns (PostResponse);
+  rpc GetPost(PostId) returns (PostResponse);
+  rpc GetPosts(Void) returns (Posts);
+  rpc UpdatePost(PostCreation) returns (PostResponse);
+  rpc SetPostStatus(PostStatusUpdate) returns (PostResponse);
+  rpc DeletePost(PostId) returns (Void);
+  rpc GetPostStatuses(Void) returns (PostStatuses);
+  rpc GetHousingTypes(Void) returns (HousingTypes);
+  rpc GetEnergyRatings(Void) returns (EnergyRatings);
+}
+
+service UserService {
+  rpc RegisterUser(UserCreation) returns (User);
+  rpc LoginUser(UserLogin) returns (User);
+  rpc GetRoles(Void) returns (Roles);
+  rpc UpdateUser(UserUpdate) returns (User);
+  rpc GetUsers(Void) returns (Users);
+  rpc GetUserById(UserId) returns (User);
+  rpc SetUserStatus(RoleUpdate) returns (Void);
+}
+
+service ChatService {
+  rpc CreateChat(ChatCreation) returns (Chat);
+  rpc GetChat(ChatId) returns (Chat);
+  rpc GetChats(UserId) returns (Chats);
+  rpc SendMessage(MessageCreation) returns (Void);
+}
+
+message ChatId {
+  int64 chatId = 1;
+}
+
+message UserId {
+  int64 userId = 1;
+}
+
+message Message {
+  int64 id = 1;
+  int64 userId = 2;
+  string body = 3;
+  string time = 4;
+}
+
+message Messages {
+  repeated Message messages = 1;
+}
+
+message MessageCreation {
+  int64 chatId = 1;
+  Message message = 2;
+}
+
+message ChatCreation {
+  int64 postId = 1;
+  Message message = 2;
+}
+
+message Chat {
+  int64 id = 1;
+  PostResponse post = 2;
+  repeated Message messages = 3;
+}
+
+message Chats {
+  repeated Chat chats = 1;
+}
+
+message Role {
+  int64 id = 1;
+  string name = 2;
+}
+
+message RoleUpdate {
+  int64 userId = 1;
+  int64 roleId = 2;
+}
+
+message Roles {
+  Role client = 1;
+  Role landlord = 2;
+  Role moderator = 3;
+  Role administrator = 4;
+  Role inactive = 5;
+  Role pending = 6;
+}
+
+message UserLogin {
+  string email = 1;
+}
+
+message UserCreation {
+  string email = 1;
+  string password = 2;
+  string firstName = 3;
+  string lastName = 4;
+  int64 roleId = 5;
+}
+
+message UserUpdate {
+  int64 id = 1;
+  string email = 2;
+  string password = 3;
+  string firstName = 4;
+  string lastName = 5;
+}
+
+message User {
+  int64 id = 1;
+  string email = 2;
+  string password = 3;
+  string firstName = 4;
+  string lastName = 5;
+  Role role = 6;
+}
+
+message Users {
+  repeated User users = 1;
+}
+
+message Image {
+  int64 id = 1;
+  string address = 2;
+}
+
+message Address {
+  int64 id = 1;
+  string street = 2;
+  string city = 3;
+  string country = 4;
+  string zipCode = 5;
+}
+
+message Cost {
+  int64 id = 1;
+  double deposit = 2;
+  double moveInPrice = 3;
+  double utilities = 4;
+  double monthlyRent = 5;
+}
+
+message Amenity {
+  int64 id = 1;
+  string name = 2;
+  string description = 3;
+}
+
+message HousingType {
+  int64 id = 1;
+  string name = 2;
+}
+
+message HousingTypes {
+  repeated HousingType housingTypes = 1;
+}
+
+message EnergyRating {
+  int64 id = 1;
+  string name = 2;
+}
+
+message EnergyRatings {
+  repeated EnergyRating energyRatings = 1;
+}
+
+message PostStatus {
+  int64 id = 1;
+  string status = 2;
+}
+
+message PostStatuses {
+  PostStatus available = 1;
+  PostStatus reserved = 2;
+  PostStatus hidden = 3;
+  PostStatus denied = 4;
+  PostStatus pending = 5;
+}
+
+message PostStatusUpdate {
+  int64 postId = 1;
+  int64 statusId = 2;
+}
+
+message PostCreation {
+  int64 id = 1;
+  string title = 2;
+  string description = 3;
+  double area = 4;
+  int32 maxTenants = 5;
+  string creationDate = 6;
+  int64 housingTypeId = 7;
+  int64 energyRatingId = 8;
+  int64 statusId = 9;
+  int64 landlordId = 10;
+  repeated Image image = 11;
+  Address address = 12;
+  Cost cost = 13;
+  repeated Amenity amenity = 14;
+}
+
+message PostResponse {
+  int64 id = 1;
+  string title = 2;
+  string description = 3;
+  double area = 4;
+  int32 maxTenants = 5;
+  string creationDate = 6;
+  HousingType housingType = 7;
+  EnergyRating energyRating = 8;
+  PostStatus status = 9;
+  User landlord = 10;
+  repeated Image image = 11;
+  Address address = 12;
+  Cost cost = 13;
+  repeated Amenity amenity = 14;
+}
+
+message PostId {
+  int64 id = 1;
+}
+
+message Posts {
+  repeated PostResponse posts = 1;
+}
+
+message Void {}

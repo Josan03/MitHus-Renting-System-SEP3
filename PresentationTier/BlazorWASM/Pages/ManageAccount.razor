@@ -1,0 +1,121 @@
+@page "/ManageAccount"
+@using Domain.Models
+@using HttpClients.ClientInterfaces
+@using System.Security.Claims
+@using Domain.DTOs
+@inject NavigationManager _nav;
+@inject IUserService UserService;
+
+<HeaderEl title="Manage account" description="This page will help you view your profile information and edit it if necessary."/>
+
+
+<div class="pageContent">
+
+    <h1 class="body_title">
+        <b>Account details</b>
+    </h1>
+
+    <div class="container card">
+        <form action="action_page.php">
+            <label for="email">Email</label>
+            <input type="text" id="email" name="email" placeholder="Email..."  @bind="SEmail" bind:event="oninput">
+
+            <label for="First name">First name</label>
+            <input type="text" id="First name" name="First name" placeholder="First name..."  @bind="SFirstname" bind:event="oninput">
+
+            <label for="Last name">Last name</label>
+            <input type="text" id="Last name" name="Last name" placeholder="Last name..."  @bind="SLastname" bind:event="oninput">
+
+            <label for="Role">Role</label>
+            <input type="text" id="Role" name="Role" placeholder="Role..." readonly="true" @bind="Role" bind:event="oninput">
+
+            <label for="Password">Password</label>
+            <input type="password" id="Password" name="Password" placeholder="Password..."  @bind="SPassword" bind:event="oninput">
+            <div class="passwordCheck">
+                <label for="showPass">Show password</label>
+                <label class="containerr">
+                    <input type="checkbox" onclick="myFunction()">
+                    <span class="checkmark"></span>
+                </label>
+            </div>
+            <div class="buttons">
+                <button type="button" class="submitBtn">Disable</button>
+                <button type="button" class="submitBtn" @onclick="Update">Modify</button>
+                <button type="button" class="submitBtn" @onclick="NavigateToIndex">Return</button>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<script>
+function myFunction() {
+  var x = document.getElementById("Password");
+  if (x.type === "password") {
+    x.type = "text";
+  } else {
+    x.type = "password";
+  }
+}
+</script>
+
+@code {
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthState { get; set; } = null!;
+    
+    User user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            AuthenticationState authState = await AuthState;
+            ClaimsPrincipal userblea = authState.User;
+            string p = userblea.FindFirst("ID").Value;
+            int id = int.Parse(p);
+            user = await UserService.GetUserByIdAsync(id);
+            SEmail = user.Email;
+            SFirstname = user.FirstName;
+            SLastname = user.LastName;
+            Role = user.Role.Name;
+            
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+
+    public string SEmail;
+    public string SFirstname;
+    public string SLastname;
+    public string SPassword = "";
+    public string Role;
+
+private async void Update()
+    {
+    try
+    {
+        UpdateUserDTO dto = new()
+        {
+            Email = SEmail,
+            FirstName = SFirstname,
+            LastName = SLastname,
+            Password = SPassword,
+            ID = user.ID
+
+        };
+        await UserService.UpdateUserAsync(dto);
+    }
+    catch (Exception e)
+        {
+            Console.WriteLine(e);
+            
+        }
+    }
+    private void NavigateToIndex()
+    {
+        _nav.NavigateTo("/");
+    }
+
+}
